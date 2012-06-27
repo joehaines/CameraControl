@@ -27,14 +27,19 @@ public class TestCamera {
     @Test
     public void switchingTheCameraOnPowersUpTheSensor() {
 
-         // check that only one sensor power up occurs ...
+        //placed in to method as reused throughout
+        powerOnCameraTest();
+
+    }
+
+    private void powerOnCameraTest() {
+        // check that only one sensor power up occurs ...
         context.checking(new Expectations() {{
             exactly(1).of(sensor).powerUp();
         }});
 
         //...when we power on the camera
         camera.powerOn();
-
     }
 
     @Test
@@ -50,12 +55,7 @@ public class TestCamera {
     @Test
     public void pressingShutterWithPowerOffDoesNothing() {
 
-        //power down the camera first
-        context.checking(new Expectations(){{
-            ignoring(sensor);
-        }});
-
-        camera.powerOff();
+        //assume that the camera is off by default
 
         //check that nothing happens
         context.checking(new Expectations() {{
@@ -71,13 +71,7 @@ public class TestCamera {
     public void pressingShutterWithPowerOnCopiesDataFromSensorToMemoryCard() {
 
         //power on the camera first
-
-        //check that power on occurs
-        context.checking(new Expectations(){{
-            exactly(1).of(sensor).powerUp();
-        }});
-
-        camera.powerOn();
+        powerOnCameraTest();
 
         //check that data copies from the sensor to the memory card
         context.checking(new Expectations() {{
@@ -95,13 +89,50 @@ public class TestCamera {
         //press the shutter
         camera.pressShutter();
 
-        //check that the write is complete
-        context.checking(new Expectations(){{
-            exactly(1).of(writeListener).writeComplete();
+    }
+
+    @Test
+    public void ifDataBeingWritten_powerDownDoesNotPowerDownSensor() {
+
+        //power on the camera first
+        powerOnCameraTest();
+
+        //check that data copies from the sensor to the memory card
+        context.checking(new Expectations() {{
+            //check that the sensor reads the data
+            oneOf(sensor).readData();
+            //ignore mem card
+            ignoring(memoryCard);
         }});
 
-        //finish the write
+        //press the shutter
+        camera.pressShutter();
+        //power off the camera
+        camera.powerOff();
+
+    }
+
+    @Test
+    public void ifDataHasBeenWritten_powerDownSensorOnceWritingComplete() {
+
+        //power on the camera first
+        powerOnCameraTest();
+
+        context.checking(new Expectations() {{
+            //check that the sensor reads the data
+            oneOf(sensor).readData();
+            //ignore mem card
+            ignoring(memoryCard);
+            //check for a power off
+            exactly(1).of(sensor).powerDown();
+        }});
+
+        //press the shutter
+        camera.pressShutter();
+        //write complete
         camera.writeComplete();
+        //power off the camera
+        camera.powerOff();
 
     }
 
